@@ -2,6 +2,7 @@
 
 #include "controller.hh"
 #include "timestamp.hh"
+#include <math.h>  
 
 using namespace std;
 
@@ -11,12 +12,14 @@ Controller::Controller( const bool debug )
 {}
 
 /* Get current window size, in datagrams */
+unsigned int the_window_size = 12;
+unsigned int tmp = 0;
 unsigned int Controller::window_size( void )
 {
   /* Default: fixed window size of 100 outstanding datagrams */
-  unsigned int the_window_size = 50;
+ 
 
-  if ( debug_ ) {
+  if ( true ) {
     cerr << "At time " << timestamp_ms()
 	 << " window size is " << the_window_size << endl;
   }
@@ -47,6 +50,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       /* when the acknowledged datagram was received (receiver's clock)*/
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
+
 {
   /* Default: take no action */
 
@@ -57,7 +61,16 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << ", received @ time " << recv_timestamp_acked << " by receiver's clock)"
 	 << endl;
   }
+
+  if (tmp > (timestamp_ack_received - recv_timestamp_acked)) {
+      the_window_size = log2(the_window_size) + 2;
+  } else {
+      the_window_size = 2*the_window_size ;
+  }
+  tmp = timestamp_ack_received - recv_timestamp_acked;
 }
+
+
 
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
