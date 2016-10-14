@@ -12,7 +12,7 @@ Controller::Controller( const bool debug )
 {}
 
 /* Get current window size, in datagrams */
-unsigned int the_window_size = 12;
+unsigned int the_window_size = 14;
 unsigned int tmp = 0;
 unsigned int Controller::window_size( void )
 {
@@ -62,12 +62,14 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << endl;
   }
 
-  if (tmp > (timestamp_ack_received - recv_timestamp_acked)) {
-      the_window_size = log2(the_window_size) + 2;
-  } else {
-      the_window_size = 2*the_window_size ;
+
+  /*AIMD*/
+  the_window_size = the_window_size + 1;
+  if (60 < timestamp_ack_received - send_timestamp_acked) {
+      the_window_size = 1 + the_window_size/2 ;
   }
-  tmp = timestamp_ack_received - recv_timestamp_acked;
+  tmp = send_timestamp_acked-recv_timestamp_acked;
+
 }
 
 
