@@ -65,10 +65,12 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 
   
   /*AIMD*/
+  unsigned int size;
+  size = rand() % 5 + 1;
   tmp = send_timestamp_acked-recv_timestamp_acked;
-  the_window_size = the_window_size + 1;
-  if (61 < tmp) {
-      the_window_size = the_window_size/2 + 1;
+  the_window_size = the_window_size + size;
+  if (70 < tmp) {
+      the_window_size = the_window_size/(1+size) + 1;
   } 
 }
 
