@@ -15,6 +15,8 @@ Controller::Controller( const bool debug )
 unsigned int the_window_size = 14;
 unsigned int tmp = 0;
 unsigned int tmp2 = 0;
+unsigned int time_last_datagram_was_sent = 0;
+
 unsigned int Controller::window_size( void )
 {
   /* Default: fixed window size of 100 outstanding datagrams */
@@ -35,10 +37,26 @@ void Controller::datagram_was_sent( const uint64_t sequence_number,
                                     /* in milliseconds */
 {
   /* Default: take no action */
+  /* Simple AIMD   
+  if ( send_timestamp > 1000 + time_last_datagram_was_sent ) {
+     the_window_size = the_window_size/2 + 1;
+  } else {
+    the_window_size = the_window_size + 1;
+  } 
+  time_last_datagram_was_sent = send_timestamp;
 
-  if ( debug_ ) {
+
+  if ( send_timestamp > 990 + time_last_datagram_was_sent ) {
+     the_window_size = the_window_size/2 + 1;
+     cerr << "At time " << send_timestamp << " had to reduce window due to Time-out" << endl;
+     time_last_datagram_was_sent = send_timestamp;
+
+  }*/
+
+  if ( false ) {
     cerr << "At time " << send_timestamp
-	 << " sent datagram " << sequence_number << endl;
+	 << " sent datagram " << sequence_number  
+         << " last datagrap " << time_last_datagram_was_sent << endl;
   }
 }
 
@@ -63,15 +81,18 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << endl;
   }
 
-  
+   
   /*AIMD*/
-  unsigned int size;
-  size = rand() % 5 + 1;
   tmp = send_timestamp_acked-recv_timestamp_acked;
-  the_window_size = the_window_size + size;
-  if (70 < tmp) {
-      the_window_size = the_window_size/(1+size) + 1;
-  } 
+  the_window_size = the_window_size +2 ;
+  if ( tmp < tmp2 - 3) {
+    the_window_size = the_window_size/2+1;
+  } else {
+     the_window_size = the_window_size + 1;
+  }     
+  cerr << "New Time " << tmp << " Old time " << tmp2 << endl;
+  tmp2 = tmp;
+
 }
 
 
