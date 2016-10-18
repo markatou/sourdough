@@ -13,9 +13,11 @@ Controller::Controller( const bool debug )
 
 /* Get current window size, in datagrams */
 unsigned int the_window_size = 14;
-unsigned int tmp = 0;
-unsigned int tmp2 = 0;
-unsigned int time_last_datagram_was_sent = 0;
+int tmp = 0;
+int tmp2 = 0;
+int time_last_datagram_was_sent = 0;
+float fall = 1;
+int rise = 5;
 
 unsigned int Controller::window_size( void )
 {
@@ -82,20 +84,26 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   }
 
    
-  /*AIMD*/
-  tmp = send_timestamp_acked-recv_timestamp_acked;
-  the_window_size = the_window_size +2 ;
-  if ( tmp < tmp2 - 3) {
-    the_window_size = the_window_size/2+1;
-  } else {
-     the_window_size = the_window_size + 1;
-  }     
-  cerr << "New Time " << tmp << " Old time " << tmp2 << endl;
+  /*Probabilistic AIAD*/
+  int i = rand() % 100;
+  tmp = timestamp_ack_received - send_timestamp_acked;
+  the_window_size = the_window_size +1 ;
+  if ( tmp > 60) {
+    if ( i < 40) { 
+      if (the_window_size < 4) {
+        the_window_size = 1;
+      } else {
+         the_window_size = the_window_size-3;
+      } 
+    }
+   }
+  if (tmp < 50) {
+    if ( i < 50) {
+      the_window_size = the_window_size +1 ;
+    }
+  }
   tmp2 = tmp;
-
 }
-
-
 
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
