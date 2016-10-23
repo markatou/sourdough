@@ -16,8 +16,11 @@ Controller::Controller( const bool debug )
 
 /* Get current window size, in datagrams */
 unsigned int the_window_size = 14;
-int currentRTT = 0;
-int tmp = 0;
+unsigned int currentRTT = 0; 
+float  ewma = 0;
+float timeout = 150; 
+unsigned int timeOut = 0;
+float stdev = 1;
 int time_last_datagram_was_sent = 0;
 
 map<unsigned int, unsigned int> m;
@@ -90,50 +93,29 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
    
   /* Try to find a better signal*/
   //int i = rand() % 100;  
-  currentRTT = timestamp_ack_received - send_timestamp_acked;
+  currentRTT = abs ( (int) timestamp_ack_received - (int) send_timestamp_acked);
   
-  // Update map, delete old stuff
-  m[timestamp_ack_received] = currentRTT;
-  list <unsigned int> times;
-
-  for (const auto &p : m) {
-    if ( p.first < timestamp_ack_received - 50) {
-        times.push_front(p.first);
-    }
-  }
   
- for (const auto &p : times) {
-    if ( m.size() > 4 ) {
-       m.erase(p);
-    }
- } 
-
-  // Get average RTT
-  float aveDelay = 0;
-  for (const auto &p : m) {
-    aveDelay = aveDelay + p.second;
-  }
-  aveDelay = aveDelay/m.size(); 
+  if ( currentRTT > (uint) (8.5  + ewma) ) { 
+    //unsigned int divis = (10 + rand() % 10+1)/10; 
+    the_window_size = (uint) the_window_size/2;
+  } 
+  
+  the_window_size = the_window_size  + 1; 
    
 
-  //cerr << " current RTT is " << currentRTT << " and ave is "<< aveDelay <<endl;
- 
    
-  if ( currentRTT > tmp ) {
-    the_window_size = the_window_size/2 + 1;
-      
-  } else {
-    the_window_size = the_window_size + 1;
-  }
-   
-   
+  int error = abs((int) currentRTT - (int) ewma); 
+  stdev =  (float) (2*stdev + 8*error)/10;
+  ewma = (float) (85*currentRTT+15*ewma)/100;
 
-  tmp = currentRTT;
+  cerr << " ave is " << ewma << " dev is " << stdev << endl;
 }
 
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
-{
-  return 1000; /* timeout of one second */
+{ timeout = (95*timeout + 5*(2*ewma+2))/100;
+  cerr << timeout <<endl;
+  return timeout; //min((uint)900, max((uint) 2*ewma+5, (uint) 200)); /* timeout of one second */
 }
