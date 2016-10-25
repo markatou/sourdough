@@ -30,7 +30,7 @@ unsigned int Controller::window_size( void )
   /* Default: fixed window size of 100 outstanding datagrams */
  
 
-  if ( true ) {
+  if ( false ) {
     cerr << "At time " << timestamp_ms()
 	 << " window size is " << the_window_size << endl;
   }
@@ -96,26 +96,33 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   currentRTT = abs ( (int) timestamp_ack_received - (int) send_timestamp_acked);
   
   
-  if ( currentRTT > (uint) (8.5  + ewma) ) { 
-    //unsigned int divis = (10 + rand() % 10+1)/10; 
+  if ( currentRTT > (uint) (  min((float)15.0, max(4*stdev,(float) 4.0)) + ewma) ) { 
     the_window_size = (uint) the_window_size/2;
   } 
   
-  the_window_size = the_window_size  + 1; 
+  the_window_size = the_window_size  + rand() % 2 + 1; 
    
+  float error;
+  if ( currentRTT > ewma) {
+    error = currentRTT -ewma;
+  } else {
+    error = ewma - currentRTT;
+  }
+  stdev =  (float) (1*stdev + 9*error)/10;
+  ewma = (float) (90*currentRTT+10*ewma)/100;
 
-   
-  int error = abs((int) currentRTT - (int) ewma); 
-  stdev =  (float) (2*stdev + 8*error)/10;
-  ewma = (float) (85*currentRTT+15*ewma)/100;
-
-  cerr << " ave is " << ewma << " dev is " << stdev << endl;
+  cerr << " ave is " << ewma << " dev is " << stdev <<" and the error " << error<< endl;
 }
 
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
-{ timeout = (95*timeout + 5*(2*ewma+2))/100;
-  cerr << timeout <<endl;
-  return timeout; //min((uint)900, max((uint) 2*ewma+5, (uint) 200)); /* timeout of one second */
+{ 
+  if (timeOut ==  0) {
+     timeOut = 1000;
+  } else {
+     timeOut = (90*timeOut + 10*(2.1*ewma))/100;
+  }
+  //cerr << timeout <<endl;
+  return timeOut; //min((uint)900, max((uint) 2*ewma+5, (uint) 200)); /* timeout of one second */
 }
