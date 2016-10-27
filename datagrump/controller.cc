@@ -18,9 +18,9 @@ Controller::Controller( const bool debug )
 unsigned int the_window_size = 14;
 unsigned int currentRTT = 0; 
 float  ewma = 0; 
-unsigned int timeOut = 0;
+unsigned int timeOut = 1000;
 float stdev = 1;
-int time_last_datagram_was_sent = 0;
+
 
 map<unsigned int, unsigned int> m;
 
@@ -44,26 +44,11 @@ void Controller::datagram_was_sent( const uint64_t sequence_number,
                                     /* in milliseconds */
 {
   /* Default: take no action */
-  /* Simple AIMD   
-  if ( send_timestamp > 1000 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-  } else {
-    the_window_size = the_window_size + 1;
-  } 
-  time_last_datagram_was_sent = send_timestamp;
+ 
 
-
-  if ( send_timestamp > 990 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-     cerr << "At time " << send_timestamp << " had to reduce window due to Time-out" << endl;
-     time_last_datagram_was_sent = send_timestamp;
-
-  }*/
-
-  if ( false ) {
+  if ( debug_ ) {
     cerr << "At time " << send_timestamp
-	 << " sent datagram " << sequence_number  
-         << " last datagrap " << time_last_datagram_was_sent << endl;
+	 << " sent datagram " << sequence_number << endl;
   }
 }
 
@@ -95,12 +80,12 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   currentRTT = abs ( (int) timestamp_ack_received - (int) send_timestamp_acked);
   
   
-  if ( currentRTT > (uint) (  min((float)10.0, max(4*stdev,(float) 5.0)) + ewma) ) { 
-    the_window_size = (uint) the_window_size/2;
-  } 
-  
-  the_window_size = the_window_size  + rand() % 2 + 1; 
-   
+  if ( currentRTT > (uint)  (ewma) ) { 
+    the_window_size = the_window_size - 1;
+  }
+  if (currentRTT < (uint)  ((int)(ewma) - 100) ) {
+    the_window_size = the_window_size + 1; 
+  }
   float error;
   if ( currentRTT > ewma) {
     error = currentRTT -ewma;
@@ -117,11 +102,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
 { 
-  if (timeOut ==  0) {
-     timeOut = 1000;
-  } else {
-     timeOut = (90*timeOut + 10*(3*ewma))/100;
-  }
-  //cerr << timeout <<endl;
-  return timeOut; //min((uint)900, max((uint) 2*ewma+5, (uint) 200)); /* timeout of one second */
+  timeOut = (90*timeOut + 10*(2*ewma))/100;
+ 
+  return timeOut;
 }
