@@ -80,11 +80,11 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   currentRTT = abs ( (int) timestamp_ack_received - (int) send_timestamp_acked);
   
   
-  if ( currentRTT > (uint)  (ewma) ) { 
-    the_window_size = the_window_size - 1;
+  if ( currentRTT > (uint) (ewma) ) { 
+    the_window_size = the_window_size/2+1;
   }
-  if (currentRTT < (uint)  ((int)(ewma) - 100) ) {
-    the_window_size = the_window_size + 1; 
+  if (currentRTT < (uint) ewma) {
+    the_window_size = the_window_size*1.8+1; 
   }
   float error;
   if ( currentRTT > ewma) {
@@ -93,7 +93,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     error = ewma - currentRTT;
   }
   stdev =  (float) (1*stdev + 9*error)/10;
-  ewma = (float) (90*currentRTT+10*ewma)/100;
+  ewma = (float) (80*currentRTT+20*ewma)/100;
 
   cerr << " ave is " << ewma << " dev is " << stdev <<" and the error " << error<< endl;
 }
