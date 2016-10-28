@@ -110,7 +110,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   stdev =  (float) (1*stdev + 9*error)/10;
   ewma = (float) (90*currentRTT+10*ewma)/100;
 
-  cerr << " ave is " << ewma << " dev is " << stdev <<" and the error " << error<< endl;
+ // cerr << " ave is " << ewma << " dev is " << stdev <<" and the error " << error<< endl;
 }
 
 /* How long to wait (in milliseconds) if there are no acks
