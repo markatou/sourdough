@@ -44,22 +44,6 @@ void Controller::datagram_was_sent( const uint64_t sequence_number,
                                     /* in milliseconds */
 {
   /* Default: take no action */
-  /* Simple AIMD   
-  if ( send_timestamp > 1000 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-  } else {
-    the_window_size = the_window_size + 1;
-  } 
-  time_last_datagram_was_sent = send_timestamp;
-
-
-  if ( send_timestamp > 990 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-     cerr << "At time " << send_timestamp << " had to reduce window due to Time-out" << endl;
-     time_last_datagram_was_sent = send_timestamp;
-
-  }*/
-
   if ( false ) {
     cerr << "At time " << send_timestamp
 	 << " sent datagram " << sequence_number  
