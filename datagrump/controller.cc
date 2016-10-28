@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdlib.h>
 
 #include "controller.hh"
 #include "timestamp.hh"
@@ -11,7 +12,12 @@ Controller::Controller( const bool debug )
 {}
 
 unsigned int the_window_size = 50;
-const uint64_t rtt_threshold = 450;
+int64_t last_rtt = 0;
+
+// value in range [1, 150] that determines if window size will be increased or decreased
+//  if random number drawn from same range is less than window_change_prob then we decrease
+//  window size (and vice versa)
+int window_change_prob = 75;
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size( void )
@@ -61,13 +67,24 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << endl;
   }
 
-  uint64_t rtt_measured = timestamp_ack_received - send_timestamp_acked;
+  uint64_t current_rtt = timestamp_ack_received - send_timestamp_acked;
+  int64_t delta_rtt =  current_rtt - last_rtt;
 
-  // perform AIMD op at every RTT
-  if ( rtt_measured  > rtt_threshold ) { the_window_size /= 2; } 
+  // if we're seeing delay increase, want smaller window (and vice versa)
+  if (delta_rtt > 0) { window_change_prob++; }
+  else { window_change_prob--; }
 
-  the_window_size++;
+  if (window_change_prob < 1) { window_change_prob = 10; }
+  if (window_change_prob > 150) { window_change_prob = 140; }
 
+  // get random number in range [1, 150]
+  int rand_draw = (rand() % 150) + 1;
+
+  // if rand_draw less than window_change_prob, decrease window (and vice versa)
+  if (rand_draw <= window_change_prob) { the_window_size /= 2 ; }
+  else { the_window_size++ ; }
+
+  last_rtt = current_rtt;
 }
 
 /* How long to wait (in milliseconds) if there are no acks
