@@ -2,10 +2,6 @@
 
 #include "controller.hh"
 #include "timestamp.hh"
-#include <math.h>  
-#include <map>
-#include <list>
-#include <algorithm>
 
 using namespace std;
 
@@ -14,20 +10,17 @@ Controller::Controller( const bool debug )
   : debug_( debug )
 {}
 
+unsigned int the_window_size = 50;
+
+uint64_t current_rtt;
+
 /* Get current window size, in datagrams */
-unsigned int the_window_size = 14;
-int currentRTT = 0;
-int tmp = 0;
-int time_last_datagram_was_sent = 0;
-
-map<unsigned int, unsigned int> m;
-
 unsigned int Controller::window_size( void )
 {
   /* Default: fixed window size of 100 outstanding datagrams */
- 
+  //unsigned int the_window_size = 50;
 
-  if ( true ) {
+  if ( debug_ ) {
     cerr << "At time " << timestamp_ms()
 	 << " window size is " << the_window_size << endl;
   }
@@ -42,26 +35,10 @@ void Controller::datagram_was_sent( const uint64_t sequence_number,
                                     /* in milliseconds */
 {
   /* Default: take no action */
-  /* Simple AIMD   
-  if ( send_timestamp > 1000 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-  } else {
-    the_window_size = the_window_size + 1;
-  } 
-  time_last_datagram_was_sent = send_timestamp;
 
-
-  if ( send_timestamp > 990 + time_last_datagram_was_sent ) {
-     the_window_size = the_window_size/2 + 1;
-     cerr << "At time " << send_timestamp << " had to reduce window due to Time-out" << endl;
-     time_last_datagram_was_sent = send_timestamp;
-
-  }*/
-
-  if ( false ) {
+  if ( debug_ ) {
     cerr << "At time " << send_timestamp
-	 << " sent datagram " << sequence_number  
-         << " last datagrap " << time_last_datagram_was_sent << endl;
+	 << " sent datagram " << sequence_number << endl;
   }
 }
 
@@ -74,7 +51,6 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       /* when the acknowledged datagram was received (receiver's clock)*/
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
-
 {
   /* Default: take no action */
 
@@ -86,49 +62,13 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << endl;
   }
 
+  current_rtt = timestamp_ack_received - send_timestamp_acked;
 
-   
-  /* Try to find a better signal*/
-  //int i = rand() % 100;  
-  currentRTT = timestamp_ack_received - send_timestamp_acked;
-  
-  // Update map, delete old stuff
-  m[timestamp_ack_received] = currentRTT;
-  list <unsigned int> times;
+  // probably had congestion if rtt's too long
+  if (current_rtt > 1000) { the_window_size = (uint64_t) (the_window_size * 0.5); }
 
-  for (const auto &p : m) {
-    if ( p.first < timestamp_ack_received - 50) {
-        times.push_front(p.first);
-    }
-  }
-  
- for (const auto &p : times) {
-    if ( m.size() > 4 ) {
-       m.erase(p);
-    }
- } 
+  the_window_size = the_window_size + 1;
 
-  // Get average RTT
-  float aveDelay = 0;
-  for (const auto &p : m) {
-    aveDelay = aveDelay + p.second;
-  }
-  aveDelay = aveDelay/m.size(); 
-   
-
-  //cerr << " current RTT is " << currentRTT << " and ave is "<< aveDelay <<endl;
- 
-   
-  if ( currentRTT > tmp ) {
-    the_window_size = the_window_size/2 + 1;
-      
-  } else {
-    the_window_size = the_window_size + 1;
-  }
-   
-   
-
-  tmp = currentRTT;
 }
 
 /* How long to wait (in milliseconds) if there are no acks
