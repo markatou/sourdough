@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
+#include <math.h>
 
 #include "controller.hh"
 #include "timestamp.hh"
@@ -11,13 +12,16 @@ Controller::Controller( const bool debug )
   : debug_( debug )
 {}
 
-unsigned int the_window_size = 50;
-int64_t last_rtt = 0;
+unsigned int the_window_size = 15;
 
-// value in range [1, 150] that determines if window size will be increased or decreased
-//  if random number drawn from same range is less than window_change_prob then we decrease
-//  window size (and vice versa)
-int window_change_prob = 75;
+uint64_t rtt_avg = 0;
+double rtt_stdev = 0.0;
+
+uint64_t prev_rtts[5] = {0, 0, 0, 0, 0};
+uint64_t* ptr = prev_rtts;
+int idx = 0; // keep track of last rtt we changed
+
+double gain = 0.2;
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size( void )
@@ -68,23 +72,37 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   }
 
   uint64_t current_rtt = timestamp_ack_received - send_timestamp_acked;
-  int64_t delta_rtt =  current_rtt - last_rtt;
 
-  // if we're seeing delay increase, want smaller window (and vice versa)
-  if (delta_rtt > 0) { window_change_prob++; }
-  else { window_change_prob--; }
+  rtt_avg = (rtt_avg * 2 + current_rtt * 8) / 10;
 
-  if (window_change_prob < 1) { window_change_prob = 10; }
-  if (window_change_prob > 150) { window_change_prob = 140; }
+  ptr[idx] = current_rtt;
+  idx = (idx + 1) % 5;
+  
+  double current_stdev;
 
-  // get random number in range [1, 150]
-  int rand_draw = (rand() % 150) + 1;
+  // get standard deviation
+  double sum = 0;
+  double sq_sum = 0;
+  for(int i = 0; i < 5; i++) {
+     sum += ptr[i];
+     sq_sum += ptr[i] * ptr[i];
+  }
 
-  // if rand_draw less than window_change_prob, decrease window (and vice versa)
-  if (rand_draw <= window_change_prob) { the_window_size /= 2 ; }
-  else { the_window_size++ ; }
+  double mean = sum / 5;
+  double variance = (sq_sum / 5) - mean * mean;
+  current_stdev = sqrt(variance); 
 
-  last_rtt = current_rtt;
+  rtt_stdev = (rtt_stdev * gain + current_stdev * (1.0 - gain));
+
+  cerr << "current_rtt : " << current_rtt << endl;
+  cerr << "rtt_avg: " << rtt_avg << endl;
+  cerr << "current_stdev: " << current_stdev << endl;
+  cerr << "rtt_stdev : " << rtt_stdev << endl;
+
+  if (current_rtt >  rtt_avg + (uint64_t) (0.25 * rtt_stdev)) { the_window_size /= 2; }
+
+  the_window_size++;
+
 }
 
 /* How long to wait (in milliseconds) if there are no acks
