@@ -95,11 +95,11 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
   currentRTT = abs ( (int) timestamp_ack_received - (int) send_timestamp_acked);
   
   
-  if ( currentRTT > (uint) (  min((float)10.0, max(4*stdev,(float) 5.0)) + ewma) ) { 
+  if ( currentRTT > (uint) (9 + ewma) ) { 
     the_window_size = (uint) the_window_size/2;
   } 
   
-  the_window_size = the_window_size  + rand() % 2 + 1; 
+  the_window_size = the_window_size  + 1; 
    
   float error;
   if ( currentRTT > ewma) {
@@ -120,8 +120,7 @@ unsigned int Controller::timeout_ms( void )
   if (timeOut ==  0) {
      timeOut = 1000;
   } else {
-     timeOut = (90*timeOut + 10*(3*ewma))/100;
+     timeOut = (90*timeOut + 10*(ewma))/100;
   }
-  //cerr << timeout <<endl;
-  return timeOut; //min((uint)900, max((uint) 2*ewma+5, (uint) 200)); /* timeout of one second */
+  return timeOut; /* timeout of one second */
 }
