@@ -11,8 +11,7 @@ Controller::Controller( const bool debug )
 {}
 
 unsigned int the_window_size = 50;
-
-uint64_t current_rtt;
+const uint64_t rtt_threshold = 450;
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size( void )
@@ -62,12 +61,12 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 	 << endl;
   }
 
-  current_rtt = timestamp_ack_received - send_timestamp_acked;
+  uint64_t rtt_measured = timestamp_ack_received - send_timestamp_acked;
 
-  // probably had congestion if rtt's too long
-  if (current_rtt > 1000) { the_window_size = (uint64_t) (the_window_size * 0.5); }
+  // perform AIMD op at every RTT
+  if ( rtt_measured  > rtt_threshold ) { the_window_size /= 2; } 
 
-  the_window_size = the_window_size + 1;
+  the_window_size++;
 
 }
 
